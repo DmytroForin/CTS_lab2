@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lab2 Sharding - EC2 with Coordinator + 3 Shards
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access
+    Type: AWS::EC2::KeyPair::lab2Key.pem
+  MyIP:
+    Description: Your public IP for SSH/Flask access (CIDR format, e.g., 1.2.3.4/32)
+    Type: String
+  RepoURL:
+    Description: GitHub repository URL with coordinator.py, shard.py, requirements.txt
+    Type: String
+    Default: "https://github.com/DmytroForin/CTS_lab2.git"
+
+Resources:
+  Lab2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow SSH and Flask access from my IP"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyIP
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5003
+          CidrIp: !Ref MyIP
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+
+  Lab2EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref Lab2SecurityGroup
+      ImageId: ami-0c02fb55956c7d316  # Ubuntu 22.04 LTS
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp2
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt update -y
+          apt install -y python3 python3-pip git
+          cd /home/ubuntu
+          git clone ${RepoURL} lab2
+          cd lab2
+          pip3 install -r requirements.txt
+          nohup python3 coordinator.py > coordinator.log 2>&1 &
+          nohup python3 shard.py 5001 > shard1.log 2>&1 &
+          nohup python3 shard.py 5002 > shard2.log 2>&1 &
+          nohup python3 shard.py 5003 > shard3.log 2>&1 &
+
+Outputs:
+  InstancePublicIP:
+    Description: Public IP of EC2 instance
+    Value: !GetAtt Lab2EC2Instance.PublicIp
+
+  InstanceId:
+    Description: ID of EC2 instance
+    Value: !Ref Lab2EC2Instance
