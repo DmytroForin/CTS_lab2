@@ -1,13 +1,13 @@
 openapi: 3.0.0
 info:
-  title: Sharded Key-Value Store
+  title: Sharded Key-Value Store API
   version: 1.0.0
 
 paths:
-  /create:
+  /register_table:
     post:
-      summary: Create a key-value pair
-      operationId: coordinator.create  
+      summary: Register a new table across all shards
+      operationId: coordinator.register_table
       requestBody:
         required: true
         content:
@@ -15,52 +15,86 @@ paths:
             schema:
               type: object
               properties:
-                key:
-                  type: string
-                value:
+                table_name:
                   type: string
       responses:
-        '201':
-          description: Created
+        "201":
+          description: Table registered
 
-  /read/{key}:
+  /create:
+    post:
+      summary: Create a new record
+      operationId: coordinator.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                table_name: { type: string }
+                partition_key: { type: string }
+                sort_key: { type: string }
+                value: { type: object }
+      responses:
+        "201": { description: Created }
+
+  /read/{table_name}/{partition_key}/{sort_key}:
     get:
-      summary: Read value by key
+      summary: Read an item
       operationId: coordinator.read
       parameters:
-        - name: key
+        - name: table_name
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+        - name: partition_key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sort_key
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200':
-          description: OK
+        "200": { description: Item found }
 
-  /delete/{key}:
+  /delete/{table_name}/{partition_key}/{sort_key}:
     delete:
-      summary: Delete value by key
+      summary: Delete an item
       operationId: coordinator.delete
       parameters:
-        - name: key
+        - name: table_name
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+        - name: partition_key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sort_key
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200':
-          description: Deleted
+        "200": { description: Item deleted }
 
-  /exists/{key}:
+  /exists/{table_name}/{partition_key}/{sort_key}:
     get:
-      summary: Check if key exists
+      summary: Check if an item exists
       operationId: coordinator.exists
       parameters:
-        - name: key
+        - name: table_name
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+        - name: partition_key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: sort_key
+          in: path
+          required: true
+          schema: { type: string }
       responses:
-        '200':
-          description: Exists
+        "200": { description: Exists check }
