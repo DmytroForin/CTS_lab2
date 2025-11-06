@@ -4,7 +4,7 @@ Description: Lab2 Sharding - EC2 with Coordinator + 3 Shards
 Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access
-    Type: AWS::EC2::KeyPair::lab2Key.pem
+    Type: AWS::EC2::KeyPair::Lab2Key
   MyIP:
     Description: Your public IP for SSH/Flask access (CIDR format, e.g., 1.2.3.4/32)
     Type: String
