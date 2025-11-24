@@ -1,0 +1,4 @@
+flask
+connexion[flask, uvicorn]
+requests
+boto3

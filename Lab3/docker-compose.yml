@@ -1,0 +1,135 @@
+version: "3.9"
+
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    entrypoint: >
+      sh -c "
+      minio server /data &
+      sleep 15 &&
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/my-bucket &&
+      wait
+      "
+    ports:
+      - "9000:9000"
+
+  coordinator:
+    build: .
+    container_name: coordinator
+    command: python coordinator.py
+    ports:
+      - "5000:5000"
+    depends_on:
+      - minio
+      - leader0
+      - leader1
+      - leader2
+
+  # Leaders
+  leader0:
+    build: .
+    container_name: leader0
+    command: python leader.py
+    environment:
+      SHARD_ID: 0
+      INTERNAL_PORT: 5001
+      BUCKET: my-bucket
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "5001:5001"
+    depends_on:
+      - minio
+
+  leader1:
+    build: .
+    container_name: leader1
+    command: python leader.py
+    environment:
+      SHARD_ID: 1
+      INTERNAL_PORT: 5002
+      BUCKET: my-bucket
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "5002:5002"
+    depends_on:
+      - minio
+
+  leader2:
+    build: .
+    container_name: leader2
+    command: python leader.py
+    environment:
+      SHARD_ID: 2
+      INTERNAL_PORT: 5003
+      BUCKET: my-bucket
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "5003:5003"
+    depends_on:
+      - minio
+
+  # Followers
+  follower0a:
+    build: .
+    container_name: follower0a
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader0:5001
+    depends_on:
+      - leader0
+
+  follower0b:
+    build: .
+    container_name: follower0b
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader0:5001
+    depends_on:
+      - leader0
+
+  follower1a:
+    build: .
+    container_name: follower1a
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader1:5002
+    depends_on:
+      - leader1
+
+  follower1b:
+    build: .
+    container_name: follower1b
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader1:5002
+    depends_on:
+      - leader1
+
+  follower2a:
+    build: .
+    container_name: follower2a
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader2:5003
+    depends_on:
+      - leader2
+
+  follower2b:
+    build: .
+    container_name: follower2b
+    command: python follower.py
+    environment:
+      LEADER_URL: http://leader2:5003
+    depends_on:
+      - leader2
